@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#10a37f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="かいもの">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2310a37f'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle'%3E🧻%3C/text%3E%3C/svg%3E">
+<title>かいもの</title>
+<style>
+  :root {
+    --bg: #f6f7f8; --card: #ffffff; --text: #1a1a1a; --sub: #8a8f98;
+    --accent: #10a37f; --line: #ececec; --danger: #d64545;
+    --chip: #eef1f3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101214; --card: #1b1e21; --text: #eceff1; --sub: #7c848d;
+      --accent: #1db388; --line: #2a2e33; --chip: #262b30;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom));
+    -webkit-user-select: none; user-select: none;
+    overscroll-behavior-y: contain;
+  }
+  header {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--bg);
+    padding: calc(10px + env(safe-area-inset-top)) 16px 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  header h1 { font-size: 17px; margin: 0; flex: 1; display: flex; align-items: center; gap: 7px; }
+  #dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sub); transition: background .3s; }
+  #dot.on { background: var(--accent); }
+  #shareBtn {
+    border: none; background: var(--chip); color: var(--text);
+    border-radius: 10px; padding: 8px 14px; font-size: 14px; cursor: pointer;
+  }
+  #banner {
+    margin: 0 16px 8px; padding: 8px 12px; border-radius: 10px;
+    background: var(--chip); color: var(--sub); font-size: 12px; line-height: 1.5;
+    display: none;
+  }
+  main { padding: 0 16px; max-width: 560px; margin: 0 auto; }
+
+  /* 買うものリスト */
+  #needList { display: flex; flex-direction: column; gap: 8px; }
+  .item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card); border-radius: 14px;
+    padding: 0 16px; min-height: 58px;
+    font-size: 17px; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    transition: opacity .25s, transform .25s;
+  }
+  .item .ring {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid var(--sub); flex: none;
+    display: flex; align-items: center; justify-content: center;
+    color: transparent; font-size: 14px;
+  }
+  .item.done { opacity: .35; transform: scale(.98); }
+  .item.done .ring { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .item.done .name { text-decoration: line-through; }
+  .item .name { flex: 1; padding: 16px 0; }
+  #emptyMsg { text-align: center; color: var(--sub); font-size: 14px; padding: 28px 0 8px; }
+
+  /* ストック（履歴） */
+  #stockSection { margin-top: 26px; }
+  #stockSection h2 { font-size: 13px; color: var(--sub); font-weight: 600; margin: 0 0 10px 2px; }
+  #stockList { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: var(--chip); color: var(--text);
+    border-radius: 20px; padding: 10px 16px; font-size: 15px;
+    cursor: pointer; border: none;
+  }
+  .chip:active { background: var(--accent); color: #fff; }
+
+  /* 入力バー（下部固定） */
+  #inputBar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+  }
+  #inputBar form { display: flex; gap: 8px; max-width: 560px; margin: 0 auto; }
+  #nameInput {
+    flex: 1; font-size: 16px; padding: 14px 16px;
+    border-radius: 14px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); outline: none;
+    -webkit-user-select: text; user-select: text;
+  }
+  #nameInput:focus { border-color: var(--accent); }
+  #addBtn {
+    border: none; background: var(--accent); color: #fff;
+    border-radius: 14px; padding: 0 22px; font-size: 16px; font-weight: 600;
+    cursor: pointer;
+  }
+  #addBtn:disabled { opacity: .4; }
+
+  /* スナックバー（元に戻す） */
+  #snack {
+    position: fixed; left: 16px; right: 16px;
+    bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 20;
+    background: var(--text); color: var(--bg);
+    border-radius: 12px; padding: 12px 16px;
+    display: none; align-items: center; gap: 12px; font-size: 14px;
+    max-width: 528px; margin: 0 auto;
+  }
+  #snack.show { display: flex; }
+  #snack button {
+    border: none; background: none; color: var(--accent);
+    font-size: 14px; font-weight: 700; cursor: pointer; margin-left: auto; padding: 4px;
+  }
+
+  /* 初回セットアップ画面 */
+  #setup { padding: 60px 24px; text-align: center; max-width: 420px; margin: 0 auto; }
+  #setup .logo { font-size: 56px; }
+  #setup h2 { font-size: 20px; margin: 12px 0 8px; }
+  #setup p { color: var(--sub); font-size: 14px; line-height: 1.7; }
+  #setup button {
+    margin-top: 20px; width: 100%; border: none; background: var(--accent); color: #fff;
+    border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧻 かいもの <span id="dot" title="同期状態"></span></h1>
+  <button id="shareBtn">共有</button>
+</header>
+<div id="banner"></div>
+
+<div id="setup" class="hidden">
+  <div class="logo">🧻</div>
+  <h2>ふたりの買い物リスト</h2>
+  <p>なくなりそうな消耗品をメモして、買ったらタップで消すだけ。リストは家族とリアルタイムで共有されます。</p>
+  <button id="createBtn">新しいリストを作る</button>
+</div>
+
+<main id="app" class="hidden">
+  <div id="needList"></div>
+  <div id="emptyMsg" class="hidden">買うものはありません 🎉</div>
+  <section id="stockSection" class="hidden">
+    <h2>ストック — 切れたらタップでリストに戻す</h2>
+    <div id="stockList"></div>
+  </section>
+</main>
+
+<div id="inputBar" class="hidden">
+  <form id="addForm" autocomplete="off">
+    <input id="nameInput" type="text" placeholder="例：シャンプー" enterkeyhint="done" maxlength="40">
+    <button id="addBtn" type="submit">追加</button>
+  </form>
+</div>
+
+<div id="snack"><span id="snackMsg"></span><button id="undoBtn">元に戻す</button></div>
+
+<script>
+// ============================================================
+// 設定：Firebaseプロジェクトを作成し、Webアプリの構成をここに貼る。
+// null のままだと「この端末のみ」のお試しモードで動く（共有なし）。
+// 手順は同フォルダの README.md を参照。
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBpMBf2L-jYQkmAD1aOMX585dDbHgJ46Qs",
+  authDomain: "kaimono-b343b.firebaseapp.com",
+  databaseURL: "https://kaimono-b343b-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "kaimono-b343b",
+  storageBucket: "kaimono-b343b.firebasestorage.app",
+  messagingSenderId: "510981566801",
+  appId: "1:510981566801:web:c9bb06a0084058b949a370"
+};
+
+(async () => {
+const $ = (id) => document.getElementById(id);
+const LS_ITEMS = "kaimono.items";   // ローカルキャッシュ / お試しモードの保存先
+const LS_LIST  = "kaimono.listId";
+
+// ---- リストID（URLの #l=xxx が共有の鍵） ----
+const hashId = () => (location.hash.match(/l=([A-Za-z0-9_-]{8,})/) || [])[1] || null;
+let listId = hashId() || localStorage.getItem(LS_LIST);
+if (hashId()) localStorage.setItem(LS_LIST, hashId());
+else if (listId) location.replace("#l=" + listId);
+
+// ---- ストレージ層：Firebase か localStorage を同じ形で使う ----
+let items = {};            // { id: {name, need, addedAt, boughtAt, count} }
+let write;                 // (patch: {id: obj|null}) => void
+const local = FIREBASE_CONFIG === null;
+
+const cached = localStorage.getItem(LS_ITEMS);
+if (cached) { try { items = JSON.parse(cached) || {}; } catch (e) {} }
+
+function cache() { localStorage.setItem(LS_ITEMS, JSON.stringify(items)); }
+
+if (local) {
+  write = (patch) => {
+    for (const [id, v] of Object.entries(patch)) {
+      if (v === null) delete items[id]; else items[id] = v;
+    }
+    cache(); render();
+  };
+} else {
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const { getDatabase, ref, update, onValue } =
+    await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+  const db = getDatabase(initializeApp(FIREBASE_CONFIG));
+  const itemsRef = () => ref(db, "lists/" + listId + "/items");
+  write = (patch) => {
+    // ローカルに即反映してから送る（体感を速く・オフラインでも見た目は更新）
+    for (const [id, v] of Object.entries(patch)) {
+      if (v === null) delete items[id]; else items[id] = v;
+    }
+    cache(); render();
+    update(itemsRef(), patch);
+  };
+  if (listId) {
+    onValue(itemsRef(), (snap) => { items = snap.val() || {}; cache(); render(); });
+    onValue(ref(db, ".info/connected"), (s) => $("dot").classList.toggle("on", !!s.val()));
+  }
+}
+
+// ---- 画面切り替え ----
+function showApp() {
+  $("setup").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("inputBar").classList.remove("hidden");
+  render();
+}
+if (local && !listId) { listId = "local"; localStorage.setItem(LS_LIST, listId); }
+if (listId) showApp();
+else {
+  $("setup").classList.remove("hidden");
+  $("createBtn").onclick = () => {
+    listId = [...crypto.getRandomValues(new Uint8Array(16))]
+      .map((b) => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"[b % 62]).join("");
+    localStorage.setItem(LS_LIST, listId);
+    location.replace("#l=" + listId);
+    location.reload();
+  };
+}
+if (local) {
+  const b = $("banner");
+  b.style.display = "block";
+  b.textContent = "お試しモード：この端末にだけ保存されます。共有するには README の手順で Firebase を設定してください。";
+  $("dot").style.display = "none";
+}
+
+// ---- 描画 ----
+function render() {
+  const need = Object.entries(items).filter(([, v]) => v && v.need)
+    .sort((a, b) => (a[1].addedAt || 0) - (b[1].addedAt || 0));
+  const stock = Object.entries(items).filter(([, v]) => v && !v.need)
+    .sort((a, b) => (b[1].boughtAt || 0) - (a[1].boughtAt || 0));
+
+  const list = $("needList");
+  list.innerHTML = "";
+  for (const [id, v] of need) {
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = '<div class="ring">✓</div><div class="name"></div>';
+    row.querySelector(".name").textContent = v.name;
+    row.onclick = () => buy(id, row);
+    holdToDelete(row, id, v.name);
+    list.appendChild(row);
+  }
+  $("emptyMsg").classList.toggle("hidden", need.length > 0);
+
+  const sl = $("stockList");
+  sl.innerHTML = "";
+  for (const [id, v] of stock) {
+    const c = document.createElement("button");
+    c.className = "chip";
+    c.textContent = v.name;
+    c.onclick = () => write({ [id]: { ...v, need: true, addedAt: Date.now() } });
+    holdToDelete(c, id, v.name);
+    sl.appendChild(c);
+  }
+  $("stockSection").classList.toggle("hidden", stock.length === 0);
+}
+
+// ---- 操作 ----
+function normalize(s) { return s.trim().replace(/\s+/g, " "); }
+
+$("addForm").onsubmit = (e) => {
+  e.preventDefault();
+  const name = normalize($("nameInput").value);
+  if (!name) return;
+  const dup = Object.entries(items).find(([, v]) => v && v.name === name);
+  if (dup) {
+    write({ [dup[0]]: { ...dup[1], need: true, addedAt: Date.now() } });
+  } else {
+    const id = "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    write({ [id]: { name, need: true, addedAt: Date.now(), boughtAt: 0, count: 0 } });
+  }
+  $("nameInput").value = "";
+};
+
+function buy(id, row) {
+  const v = items[id];
+  if (!v || !v.need) return;
+  row.classList.add("done");     // 先にチェック表示 → 少し待って移動
+  setTimeout(() => {
+    write({ [id]: { ...v, need: false, boughtAt: Date.now(), count: (v.count || 0) + 1 } });
+    snack("「" + v.name + "」を購入済みにしました", () =>
+      write({ [id]: { ...items[id], need: true, addedAt: v.addedAt } }));
+  }, 350);
+}
+
+// 長押しで削除（リスト・ストック共通）
+function holdToDelete(el, id, name) {
+  let t;
+  const start = () => { t = setTimeout(() => {
+    if (confirm("「" + name + "」をリストから完全に削除しますか？")) write({ [id]: null });
+  }, 600); };
+  const cancel = () => clearTimeout(t);
+  el.addEventListener("touchstart", start, { passive: true });
+  el.addEventListener("touchend", cancel);
+  el.addEventListener("touchmove", cancel, { passive: true });
+  el.addEventListener("contextmenu", (e) => e.preventDefault());
+}
+
+// ---- スナックバー ----
+let snackTimer;
+function snack(msg, onUndo) {
+  $("snackMsg").textContent = msg;
+  $("undoBtn").onclick = () => { onUndo(); $("snack").classList.remove("show"); };
+  $("snack").classList.add("show");
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(() => $("snack").classList.remove("show"), 4000);
+}
+
+// ---- 共有 ----
+$("shareBtn").onclick = async () => {
+  if (local) { alert("お試しモードでは共有できません。README の手順で Firebase を設定してください。"); return; }
+  const url = location.origin + location.pathname + "#l=" + listId;
+  if (navigator.share) { try { await navigator.share({ title: "かいもの", url }); } catch (e) {} }
+  else { await navigator.clipboard.writeText(url); alert("リストのURLをコピーしました。LINEなどで送ってください。"); }
+};
+
+// ---- PWA ----
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+render();
+})();
+</script>
+</body>
+</html>
