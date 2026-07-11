@@ -7,7 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="かいもの">
-<link rel="manifest" href="manifest.webmanifest">
+<!-- manifestは意図的に使わない：iOSはmanifestがあるとstart_url（#l=なし）でホーム追加してしまい、
+     リストID（URLフラグメント）が失われて共有が切れるため。manifestなしなら追加時のURLがそのまま保存される -->
+
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2310a37f'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle'%3E🧻%3C/text%3E%3C/svg%3E">
 <title>かいもの</title>
 <style>
@@ -130,6 +132,14 @@
     margin-top: 20px; width: 100%; border: none; background: var(--accent); color: #fff;
     border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer;
   }
+  #setup .joinLabel { margin-top: 36px; text-align: left; font-size: 13px; }
+  #joinInput {
+    width: 100%; font-size: 16px; padding: 14px 16px; margin-top: 8px;
+    border-radius: 14px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); outline: none;
+    -webkit-user-select: text; user-select: text;
+  }
+  #setup #joinBtn { background: var(--chip); color: var(--text); margin-top: 10px; }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -146,6 +156,9 @@
   <h2>ふたりの買い物リスト</h2>
   <p>なくなりそうな消耗品をメモして、買ったらタップで消すだけ。リストは家族とリアルタイムで共有されます。</p>
   <button id="createBtn">新しいリストを作る</button>
+  <p class="joinLabel">すでに家族がリストを持っている場合は、届いたリンクをここに貼り付け：</p>
+  <input id="joinInput" type="text" placeholder="https://... #l=... を含むリンク" autocomplete="off">
+  <button id="joinBtn">リンクから参加</button>
 </div>
 
 <main id="app" class="hidden">
@@ -246,6 +259,15 @@ else {
       .map((b) => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"[b % 62]).join("");
     localStorage.setItem(LS_LIST, listId);
     location.replace("#l=" + listId);
+    location.reload();
+  };
+  // LINE→Safari間や「ホーム画面に追加」でURLの #l= が落ちた場合の救済入口
+  $("joinBtn").onclick = () => {
+    const t = ($("joinInput").value || "").trim();
+    const m = t.match(/l=([A-Za-z0-9_-]{8,})/) || t.match(/^([A-Za-z0-9_-]{16,})$/);
+    if (!m) { alert("リンクからリストIDを読み取れませんでした。届いたメッセージのリンクを長押しコピーして、そのまま貼り付けてください。"); return; }
+    localStorage.setItem(LS_LIST, m[1]);
+    location.replace("#l=" + m[1]);
     location.reload();
   };
 }

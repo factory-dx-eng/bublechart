@@ -1,6 +1,6 @@
 // ネットワーク優先・失敗時キャッシュ。店内など電波が悪い場所でも前回の画面が開ける。
-const CACHE = "kaimono-v1";
-const ASSETS = ["./", "./index.html", "./manifest.webmanifest"];
+const CACHE = "kaimono-v2";
+const ASSETS = ["./", "./index.html"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
