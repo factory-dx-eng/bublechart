@@ -17,11 +17,13 @@
     --bg: #f6f7f8; --card: #ffffff; --text: #1a1a1a; --sub: #8a8f98;
     --accent: #10a37f; --line: #ececec; --danger: #d64545;
     --chip: #eef1f3;
+    --rakuten: #bf0000; --badge-s-bg: #e3f4ef; --badge-r-bg: #fbe9e9;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #101214; --card: #1b1e21; --text: #eceff1; --sub: #7c848d;
       --accent: #1db388; --line: #2a2e33; --chip: #262b30;
+      --rakuten: #f07575; --badge-s-bg: #1d332c; --badge-r-bg: #3a2224;
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -74,6 +76,21 @@
   .item.done .name { text-decoration: line-through; }
   .item .name { flex: 1; padding: 16px 0; }
   #emptyMsg { text-align: center; color: var(--sub); font-size: 14px; padding: 28px 0 8px; }
+
+  /* 購入先バッジ（スーパー/楽天）とグループ見出し */
+  .badge {
+    border: none; flex: none; font-size: 11px; font-weight: 600;
+    padding: 6px 10px; border-radius: 9px; cursor: pointer; font-family: inherit;
+  }
+  .badge.s { background: var(--badge-s-bg); color: var(--accent); }
+  .badge.r { background: var(--badge-r-bg); color: var(--rakuten); }
+  .groupH { font-size: 13px; color: var(--sub); font-weight: 600; margin: 8px 2px 0; }
+  .chip .dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 7px; vertical-align: 1px;
+  }
+  .dot.s { background: var(--accent); }
+  .dot.r { background: var(--rakuten); }
 
   /* ストック（履歴） */
   #stockSection { margin-top: 26px; }
@@ -279,6 +296,27 @@ if (local) {
 }
 
 // ---- 描画 ----
+// 購入先チャネル："s"=スーパー（既定）/ "r"=楽天。古いデータ（ch未設定）はスーパー扱い
+const chOf = (v) => (v.ch === "r" ? "r" : "s");
+const CH_LABEL = { s: "スーパー", r: "楽天" };
+
+function makeRow(id, v) {
+  const row = document.createElement("div");
+  row.className = "item";
+  row.innerHTML = '<div class="ring">✓</div><div class="name"></div><button class="badge"></button>';
+  row.querySelector(".name").textContent = v.name;
+  const b = row.querySelector(".badge");
+  b.classList.add(chOf(v));
+  b.textContent = CH_LABEL[chOf(v)];
+  b.onclick = (e) => {
+    e.stopPropagation();
+    write({ [id]: { ...v, ch: chOf(v) === "r" ? "s" : "r" } });
+  };
+  row.onclick = () => buy(id, row);
+  holdToDelete(row, id, v.name);
+  return row;
+}
+
 function render() {
   const need = Object.entries(items).filter(([, v]) => v && v.need)
     .sort((a, b) => (a[1].addedAt || 0) - (b[1].addedAt || 0));
@@ -287,15 +325,21 @@ function render() {
 
   const list = $("needList");
   list.innerHTML = "";
-  for (const [id, v] of need) {
-    const row = document.createElement("div");
-    row.className = "item";
-    row.innerHTML = '<div class="ring">✓</div><div class="name"></div>';
-    row.querySelector(".name").textContent = v.name;
-    row.onclick = () => buy(id, row);
-    holdToDelete(row, id, v.name);
-    list.appendChild(row);
-  }
+  const store = need.filter(([, v]) => chOf(v) === "s");
+  const raku = need.filter(([, v]) => chOf(v) === "r");
+  const mixed = store.length > 0 && raku.length > 0; // 両方あるときだけ見出しを出す
+  const addGroup = (label, arr) => {
+    if (!arr.length) return;
+    if (mixed) {
+      const h = document.createElement("h2");
+      h.className = "groupH";
+      h.textContent = label;
+      list.appendChild(h);
+    }
+    for (const [id, v] of arr) list.appendChild(makeRow(id, v));
+  };
+  addGroup("スーパー", store);
+  addGroup("楽天", raku);
   $("emptyMsg").classList.toggle("hidden", need.length > 0);
 
   const sl = $("stockList");
@@ -303,7 +347,10 @@ function render() {
   for (const [id, v] of stock) {
     const c = document.createElement("button");
     c.className = "chip";
-    c.textContent = v.name;
+    const dot = document.createElement("span");
+    dot.className = "dot " + chOf(v);
+    c.appendChild(dot);
+    c.appendChild(document.createTextNode(v.name));
     c.onclick = () => write({ [id]: { ...v, need: true, addedAt: Date.now() } });
     holdToDelete(c, id, v.name);
     sl.appendChild(c);
@@ -323,7 +370,7 @@ $("addForm").onsubmit = (e) => {
     write({ [dup[0]]: { ...dup[1], need: true, addedAt: Date.now() } });
   } else {
     const id = "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    write({ [id]: { name, need: true, addedAt: Date.now(), boughtAt: 0, count: 0 } });
+    write({ [id]: { name, need: true, addedAt: Date.now(), boughtAt: 0, count: 0, ch: "s" } });
   }
   $("nameInput").value = "";
 };
