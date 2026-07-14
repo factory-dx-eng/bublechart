@@ -260,6 +260,11 @@ if (local) {
   }
 }
 
+// 購入先チャネル："s"=スーパー（既定）/ "r"=楽天。古いデータ（ch未設定）はスーパー扱い
+// ※ showApp()（起動時にrenderを呼ぶ）より前に定義しておくこと。後置するとTDZで起動時に落ちる
+const chOf = (v) => (v.ch === "r" ? "r" : "s");
+const CH_LABEL = { s: "スーパー", r: "楽天" };
+
 // ---- 画面切り替え ----
 function showApp() {
   $("setup").classList.add("hidden");
@@ -296,10 +301,6 @@ if (local) {
 }
 
 // ---- 描画 ----
-// 購入先チャネル："s"=スーパー（既定）/ "r"=楽天。古いデータ（ch未設定）はスーパー扱い
-const chOf = (v) => (v.ch === "r" ? "r" : "s");
-const CH_LABEL = { s: "スーパー", r: "楽天" };
-
 function makeRow(id, v) {
   const row = document.createElement("div");
   row.className = "item";
